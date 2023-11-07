@@ -1,0 +1,127 @@
+diff -Naur a/barretenberg/cpp/CMakePresets.json b/barretenberg/cpp/CMakePresets.json
+--- a/barretenberg/cpp/CMakePresets.json	2023-10-31 11:00:05.000000000 +0000
++++ b/barretenberg/cpp/CMakePresets.json	2023-11-06 16:02:25.916792905 +0000
+@@ -229,6 +229,25 @@
+         "MULTITHREADING": "OFF"
+       },
+       "binaryDir": "build-xray-1thread"
++    },
++    {
++      "name": "riscv64",
++      "displayName": "Build for RISCV64",
++      "description": "Build for cartesi machine riscv",
++      "binaryDir": "build-riscv",
++      "toolchainFile": "cmake/toolchains/riscv64.cmake",
++      "environment": {
++        "PLATFORM": "riscv64-linux-gnu",
++        "CC": "$env{PLATFORM}-gcc",
++        "CXX": "$env{PLATFORM}-g++",
++        "AR": "$env{PLATFORM}-ar"
++      },
++      "cacheVariables": {
++        "DISABLE_ASM":"ON",
++        "DISABLE_ADX":"ON",
++        "MULTITHREADING":"OFF",
++        "OMP_MULTITHREADING":"OFF"
++      }
+     }
+   ],
+   "buildPresets": [
+@@ -340,6 +359,12 @@
+       "name": "xray",
+       "configurePreset": "xray",
+       "inherits": "default"
++    },
++    {
++      "name": "riscv64",
++      "configurePreset": "riscv64",
++      "inheritConfigureEnvironment": true
++               
+     }
+   ],
+   "testPresets": [
+diff -Naur a/barretenberg/cpp/cmake/arch.cmake b/barretenberg/cpp/cmake/arch.cmake
+--- a/barretenberg/cpp/cmake/arch.cmake	2023-10-31 11:00:05.000000000 +0000
++++ b/barretenberg/cpp/cmake/arch.cmake	2023-11-04 05:05:14.677095571 +0000
+@@ -5,7 +5,7 @@
+     add_compile_options(-fno-exceptions -fno-slp-vectorize)
+ endif()
+ 
+-if(NOT WASM AND NOT APPLE AND NOT ARM)
++if(NOT WASM AND NOT APPLE AND NOT ARM AND NOT RISCV)
+     message(STATUS "Target architecture: ${TARGET_ARCH}")
+     add_compile_options(-march=${TARGET_ARCH})
+ endif()
+diff -Naur a/barretenberg/cpp/cmake/toolchains/riscv64.cmake b/barretenberg/cpp/cmake/toolchains/riscv64.cmake
+--- a/barretenberg/cpp/cmake/toolchains/riscv64.cmake	1970-01-01 00:00:00.000000000 +0000
++++ b/barretenberg/cpp/cmake/toolchains/riscv64.cmake	2023-11-04 05:05:14.677095571 +0000
+@@ -0,0 +1,26 @@
++set(RISCV ON)
++set(PLATFORM          riscv64-linux-gnu )
++
++set(CMAKE_SYSTEM_NAME          Generic )
++set(CMAKE_SYSTEM_PROCESSOR     rv64imafdc )
++set(CMAKE_EXECUTABLE_SUFFIX    "")
++
++set(CMAKE_ASM_COMPILER {PLATFORM}-gcc )
++set(CMAKE_AR ${PLATFORM}-ar)
++set(CMAKE_ASM_COMPILER ${PLATFORM}-gcc)
++set(CMAKE_C_COMPILER ${PLATFORM}-gcc)
++set(CMAKE_CXX_COMPILER ${PLATFORM}-g++)
++
++
++set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g" )
++set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=${CMAKE_SYSTEM_PROCESSOR}" )
++
++set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "" )
++set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "" )
++set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "" )
++
++CMAKE_POLICY( SET CMP0003 OLD )
++
++include_directories(/usr/${PLATFORM}/include)
++link_directories(/usr/${PLATFORM}/lib)
++
+diff -Naur a/barretenberg/cpp/src/barretenberg/bb/config.hpp b/barretenberg/cpp/src/barretenberg/bb/config.hpp
+--- a/barretenberg/cpp/src/barretenberg/bb/config.hpp	1970-01-01 00:00:00.000000000 +0000
++++ b/barretenberg/cpp/src/barretenberg/bb/config.hpp	2023-11-04 05:05:14.677095571 +0000
+@@ -0,0 +1,6 @@
++#ifndef INCLUDE_GUARD
++#define INCLUDE_GUARD
++
++#define BB_VERSION "0.13.1"
++
++#endif // INCLUDE_GUARD
+diff -Naur a/barretenberg/cpp/src/barretenberg/common/benchmark.hpp b/barretenberg/cpp/src/barretenberg/common/benchmark.hpp
+--- a/barretenberg/cpp/src/barretenberg/common/benchmark.hpp	2023-10-31 11:00:05.000000000 +0000
++++ b/barretenberg/cpp/src/barretenberg/common/benchmark.hpp	2023-11-04 05:05:14.677095571 +0000
+@@ -101,5 +101,5 @@
+ 
+     oss << "}" << std::endl;
+     const std::string& tmp = oss.str();
+-    write((int)bfd, tmp.c_str(), tmp.size());
+-}
+\ No newline at end of file
++    (void)(write((int)bfd, tmp.c_str(), tmp.size())+1);
++}
+diff -Naur a/barretenberg/cpp/src/barretenberg/ecc/fields/field_declarations.hpp b/barretenberg/cpp/src/barretenberg/ecc/fields/field_declarations.hpp
+--- a/barretenberg/cpp/src/barretenberg/ecc/fields/field_declarations.hpp	2023-10-31 11:00:05.000000000 +0000
++++ b/barretenberg/cpp/src/barretenberg/ecc/fields/field_declarations.hpp	2023-11-04 05:05:14.681095627 +0000
+@@ -356,10 +356,17 @@
+         field t1 = (q2_lo - q1_lo).reduce_once();
+         field beta = cube_root_of_unity();
+         field t2 = (t1 * beta + input).reduce_once();
++#if !defined(__clang__) && defined(__GNUC__)
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Warray-bounds"
++#endif
+         k2.data[0] = t1.data[0];
+         k2.data[1] = t1.data[1];
+         k1.data[0] = t2.data[0];
+         k1.data[1] = t2.data[1];
++#if !defined(__clang__) && defined(__GNUC__)
++#pragma GCC diagnostic pop
++#endif
+     }
+ 
+     static void split_into_endomorphism_scalars_384(const field& input, field& k1_out, field& k2_out)
