@@ -66,7 +66,7 @@ class Verifier:
                 raise Exception("Parameter missing")
             if type(payload_param) == type(""):
                 payload_param = [payload_param]
-            param_bytes_list = [hex2bytes(i[2:]) for i in payload_param]
+            param_bytes_list = [hex2bytes(i) for i in payload_param]
             for b in param_bytes_list: proof_file.write(b)
 
         proof = hex2bytes(proof_json['proof'])
@@ -84,7 +84,6 @@ class Verifier:
 
 
 if __name__ == '__main__':
-
     import sys,getopt
     opts, args = getopt.getopt(sys.argv[1:],"hvc:p:b:t:",["help","verbose","circuit=","proof=","backend_path=","target_path=","write_vk","verify","prove"])
     proof = None

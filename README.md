@@ -1,5 +1,9 @@
 # ZK Barretenberg Verifier
 
+```
+Cartesi Rollups version: 1.0.x
+```
+
 This is an example that uses [noir lang](https://noir-lang.org/) backend to verify the input in a Cartesi Rollups DApp.
 
 DISCLAIMERS
@@ -10,12 +14,7 @@ This is not a final product and should not be used as one.
 
 - [npm](https://docs.npmjs.com/cli/v9/configuring-npm/install) (To run sunodo)
 - [Sunodo](https://github.com/sunodo/sunodo) (To build and run the DApp backend)
-
-To install sunodo run:
-
-```shell
-npm install -g @sunodo/cli
-```
+- [nargo](https://noir-lang.org/getting_started/nargo_installation) (To test the circuit locally)
 
 ## Interacting with the DApp
 
@@ -33,7 +32,7 @@ To send advance requests you can use sunodo cli
 
 ```shell
 sunodo send generic --chain-id=31337 --rpc-url=http://127.0.0.1:8545 \
-    --mnemonic-index=1 --mnemonic-passphrase='test test test test test test test test test test test junk'\
+    --mnemonic-index=0 --mnemonic-passphrase='test test test test test test test test test test test junk'\
     --dapp=0x70ac08179605AF2D9e75782b8DEcDD3c22aA4D0C --input=$proof_json
 ```
 
